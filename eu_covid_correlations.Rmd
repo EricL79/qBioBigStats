@@ -1,0 +1,68 @@
+
+---
+title: "Significant Correlations in EU's COVID-19 Data"
+author: "Eric Leisten-butterfly team"
+date: "2023-09-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading the Necessary Libraries
+
+```{r}
+library(dplyr)
+```
+
+## Data Loading and Pre-processing
+
+```{r}
+# Read the dataset 
+data <- read.csv("https://covid.ourworldindata.org/data/owid-covid-data.csv",
+                 na.strings = "", header=T)
+
+# Filter for European Union
+eu_data <- data %>% filter(location == "European Union")
+```
+
+## Determining Significant Correlations
+
+```{r}
+# variables to check for correlation
+variables <- c("total_cases", "new_cases", 
+               "total_deaths", "new_deaths", 
+               # ... [rest of your variables here]
+               "excess_mortality_cumulative_per_million")
+
+res <- NULL
+for(i in 1:(length(variables) - 1)) {
+  for(j in (i+1):length(variables)) {
+    var1 <- variables[i]
+    var2 <- variables[j]
+    
+    # Filter out rows with NA values 
+    temp_data <- na.omit(eu_data[, c(var1, var2)])
+    
+    if(nrow(temp_data) >= 10) {
+      cor_res <- cor.test(temp_data[[var1]], temp_data[[var2]])
+      res <- rbind(res, c(var1, var2, cor_res$estimate, cor_res$p.value))
+    }
+  }
+}
+
+# Convert to a data frame 
+res_df <- as.data.frame(res)
+colnames(res_df) <- c("Variable1", "Variable2", "Correlation", "P_Value")
+
+# Filter for significant correlations
+significant_correlations <- res_df %>% filter(as.numeric(P_Value) <= 0.05)
+
+print(significant_correlations)
+```
+
+## comments
+## From this analysis we can see that COVID data contains many significant correlations. For example, we can see that total cases correlate signficantly with total boosters suggesting that boosters may increase the number of COVID cases in the EU. From this I argue that boosters are bad because they may increase an individuals riskyness resulting in overall more COVID transmission (i.e boosters increase case counts). 
+
+## while the above perspective on risk and boosters may be a factor, because we used multiple tests without testing correction, it is possible that our singificant result is a result of chance. For running multiple coparisons on 50 variables, there are over 1000 tests. With this number of tests the chance of a false positive significant result is essentially 1, with ~60 total expected false positives. This is almost a third of all above significant results, or 33% FDR. 
